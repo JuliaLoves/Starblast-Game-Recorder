@@ -2,7 +2,7 @@
 // @name            Starblast Game Recorder
 // @name:ru         Starblast Game Recorder
 // @namespace       https://greasyfork.org/ru/users/1252274-julia1233
-// @version         1.8.7
+// @version         1.8.8
 // @description     Recording + replay via WebSocket simulation with user data protection
 // @description:ru  Запись и воспроизведение сессий Starblast.io с защитой данных пользователя
 // @author          Julia1233
@@ -16,7 +16,7 @@
 // ==/UserScript==
 
 /*
- * Starblast Game Recorder v1.8.7
+ * Starblast Game Recorder v1.8.8
  * Copyright (c) 2025 Julia1233
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -398,7 +398,7 @@
             `;
 
             container.innerHTML = `
-                <div style="font-weight: bold; color: #0f0; font-size: 14px; margin-bottom: 10px;">🎮 RECORDER v1.8.7 (Shift+R)</div>
+                <div style="font-weight: bold; color: #0f0; font-size: 14px; margin-bottom: 10px;">🎮 RECORDER v1.8.8 (Shift+R)</div>
                 
                 <div style="border-bottom: 1px solid #0f0; margin: 10px 0; padding: 10px 0;">
                     <div style="font-size: 12px; margin-bottom: 8px;">📝 RECORDING:</div>
@@ -442,8 +442,8 @@
                     <div id="playback-info" style="margin-top: 8px; font-size: 9px; color: #888; padding: 8px; background: #111; border-radius: 4px; max-height: 60px; overflow-y: auto;">No recording loaded</div>
                 </div>
             `;
-            document.getElementById('auto-record').checked = this.autoRecordEnabled;
             document.body.appendChild(container);
+            document.getElementById('auto-record').checked = this.autoRecordEnabled;
             this.setupEventListeners();
         }
 
@@ -932,5 +932,5 @@
     }
 
     window.__gameRecorder = new GameRecorder();
-    console.log('[Recorder] v1.8.7 - Mouse recording & replay system');
+    console.log('[Recorder] v1.8.8 - Mouse recording & replay system');
 })();
