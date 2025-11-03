@@ -2,7 +2,7 @@
 // @name            Starblast Game Recorder
 // @name:ru         Starblast Game Recorder
 // @namespace       https://greasyfork.org/ru/users/1252274-julia1233
-// @version         1.8.3
+// @version         1.8.4
 // @description     Recording + replay via WebSocket simulation with user data protection
 // @description:ru  Запись и воспроизведение сессий Starblast.io с защитой данных пользователя
 // @author          Julia1233
@@ -16,7 +16,7 @@
 // ==/UserScript==
 
 /*
- * Starblast Game Recorder v1.8.3
+ * Starblast Game Recorder v1.8.4
  * Copyright (c) 2025 Julia1233
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -227,6 +227,7 @@
             this.uiVisible = false;
             this.recordingStartTime = null;
             this.isOver100Seconds = false;
+            this.mouseBlockHandlers = null;
 
             window.__recorderInstance = this;
             this.setupUI();
@@ -381,7 +382,7 @@
             `;
 
             container.innerHTML = `
-                <div style="font-weight: bold; color: #0f0; font-size: 14px; margin-bottom: 10px;">🎮 RECORDER v1.8.3 (Shift+R)</div>
+                <div style="font-weight: bold; color: #0f0; font-size: 14px; margin-bottom: 10px;">🎮 RECORDER v1.8.4 (Shift+R)</div>
                 
                 <div style="border-bottom: 1px solid #0f0; margin: 10px 0; padding: 10px 0;">
                     <div style="font-size: 12px; margin-bottom: 8px;">📝 RECORDING:</div>
@@ -596,6 +597,9 @@
             this.playbackIndex = 0;
             this.playbackStartTime = Date.now();
 
+            this.blockUserMouseInput();
+            console.log('[Recorder] User mouse input BLOCKED');
+
             document.getElementById('btn-pause').disabled = false;
             document.getElementById('btn-stop-play').disabled = false;
 
@@ -645,6 +649,13 @@
 
             const data = this.deserializeData(msgData.data);
 
+            if (window.__playingRecording && this.isPlayback) {
+                const angle = this.extractAngleFromPacket(data);
+                if (angle !== null) {
+                    this.applyRotationFromPlayback(angle);
+                }
+            }
+
             if (this.fakeWs) {
                 const event = new MessageEvent('message', {
                     data: data,
@@ -685,6 +696,98 @@
             window.__isPlayingMessage = false;
         }
 
+        extractAngleFromPacket(data) {
+            try {
+                let packet = null;
+
+                if (data instanceof Blob) {
+                    return null;
+                }
+
+                if (data instanceof ArrayBuffer) {
+                    const view = new Uint8Array(data);
+                    if (view.length < 2) return null;
+                    packet = (view[0] << 8) | view[1];
+                } else if (ArrayBuffer.isView(data)) {
+                    const view = new Uint8Array(data);
+                    if (view.length < 2) return null;
+                    packet = (view[0] << 8) | view[1];
+                } else if (typeof data === 'string') {
+                    try {
+                        const obj = JSON.parse(data);
+                        if (obj.r !== undefined) {
+                            return obj.r % 360;
+                        }
+                    } catch (e) { }
+                    return null;
+                }
+
+                if (packet === null) return null;
+
+                const angle = packet % 360;
+                return angle;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        applyRotationFromPlayback(angle) {
+            try {
+                const canvas = document.querySelector('canvas');
+                if (!canvas) return;
+
+                const rect = canvas.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                const rad = (angle * Math.PI) / 180;
+                const distance = 100;
+                const mouseX = centerX + distance * Math.cos(rad);
+                const mouseY = centerY + distance * Math.sin(rad);
+
+                const moveEvent = new MouseEvent('mousemove', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    clientX: mouseX,
+                    clientY: mouseY,
+                    screenX: mouseX,
+                    screenY: mouseY
+                });
+
+                document.dispatchEvent(moveEvent);
+                canvas.dispatchEvent(moveEvent);
+            } catch (e) {
+                console.error('[Recorder] Error applying rotation:', e);
+            }
+        }
+
+        blockUserMouseInput() {
+            const handler = (e) => {
+                if (window.__playingRecording && this.isPlayback) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+            };
+
+            document.addEventListener('mousemove', handler, true);
+            document.addEventListener('mousedown', handler, true);
+            document.addEventListener('mouseup', handler, true);
+            document.addEventListener('mouseenter', handler, true);
+
+            this.mouseBlockHandlers = { handler, events: ['mousemove', 'mousedown', 'mouseup', 'mouseenter'] };
+        }
+
+        unblockUserMouseInput() {
+            if (!this.mouseBlockHandlers) return;
+
+            this.mouseBlockHandlers.events.forEach(event => {
+                document.removeEventListener(event, this.mouseBlockHandlers.handler, true);
+            });
+
+            this.mouseBlockHandlers = null;
+        }
+
         updatePlaybackUI(recordingData) {
             const msgs = recordingData.messages;
             if (this.playbackIndex === 0) return;
@@ -712,6 +815,9 @@
             window.__playingRecording = null;
             window.__fakeServerMode = false;
             window.__hideOverlay = false;
+
+            this.unblockUserMouseInput();
+            console.log('[Recorder] User mouse input UNBLOCKED');
 
             const overlay = document.getElementById('overlay');
             if (overlay) {
@@ -854,5 +960,5 @@
     }
 
     window.__gameRecorder = new GameRecorder();
-    console.log('[Recorder] v1.8.3 - Replay mode with user data protection');
+    console.log('[Recorder] v1.8.4 - Replay mode with user data protection');
 })();
